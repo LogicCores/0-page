@@ -1,0 +1,9 @@
+{
+  "name": "0-page-for-page",
+  "version": "0.0.0",
+  "private": true,
+  "main": "page.js",
+  "dependencies": {
+    "page": "^1.6.3"
+  }
+}
