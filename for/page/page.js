@@ -5,18 +5,9 @@ exports.spin = function (context) {
 
     var Page = function () {
         var self = this;
-    
-        self._path = null;
-    
+
         PAGE('*', function load(ctx) {
-        	try {
-                if (self._path !== ctx.path) {
-                    self._path = ctx.path;
-                    self.emit("changed:path", ctx.path);
-                }
-        	} catch (err) {
-        		console.error("page changed error:", err.stack);
-        	}
+            context.setPath(ctx.path);
         });
     
         // Wait for listeners to attach
@@ -27,7 +18,6 @@ exports.spin = function (context) {
             });
         }, 0);
     }
-    Page.prototype = Object.create(window.EventEmitter.prototype);
     Page.prototype.navigateTo = function (path) {
         PAGE.show(path);
     }
