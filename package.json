@@ -1,7 +1,6 @@
 {
   "name": "0-page",
   "version": "0.0.0",
-  "main": "page.js",
   "dependencies": {
   }
 }
