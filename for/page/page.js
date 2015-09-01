@@ -9,7 +9,11 @@ exports.spin = function (context) {
         PAGE('*', function load(ctx) {
             context.setPath(ctx.path);
         });
-    
+
+		context.on("changed:path", function (path) {
+            PAGE.show(path);
+		});
+
         // Wait for listeners to attach
         setTimeout(function () {
             PAGE({
@@ -17,9 +21,6 @@ exports.spin = function (context) {
             	click: false
             });
         }, 0);
-    }
-    Page.prototype.navigateTo = function (path) {
-        PAGE.show(path);
     }
 
     return new Page(context);
