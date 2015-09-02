@@ -7,6 +7,8 @@ exports.spin = function (context) {
     var Page = function () {
         var self = this;
         
+        var rootElm = $("body");
+        
         function initEventDelegator () {
             
             var eventBus = new window.EventEmitter();
@@ -35,7 +37,7 @@ exports.spin = function (context) {
 
         function hookActions () {
             var actions = [];
-            $("[data-component-action-target]").each(function () {
+            $("[data-component-action-target]", rootElm).each(function () {
                 var elm = $(this);
                 var action = {
                     elm: elm,
@@ -57,9 +59,38 @@ exports.spin = function (context) {
             return actions;
         }
 
+        function hookViews () {
+            var views = {};
+            $('[data-component-view]', rootElm).each(function () {
+    			var elm = $(this);
+    			// We ignore views that are within components
+    			if (typeof elm.attr("data-component-section") !== "undefined") return;
+    			var name = elm.attr("data-component-view");
+    			var visibility = elm.attr("data-component-view-visibility") || null;
+    			views[name] = {
+    			    elm: elm,
+    			    hide: function () {
+            			if (visibility === "hidden") {
+            				elm.css("visibility", "hidden");
+            			} else {
+            				elm.addClass("hidden");
+            			}
+    			    },
+    			    show: function () {
+            			if (visibility === "hidden") {
+            				elm.css("visibility", "");
+            			} else {
+            				elm.removeClass("hidden");
+            			}
+    			    }
+    			};
+    		});
+    		return views;
+        }
+
         function scanAnchors () {
             var anchors = {};
-            $("[data-component-anchor-id]").each(function () {
+            $("[data-component-anchor-id]", rootElm).each(function () {
                 var anchor = $(this);
                 anchors[anchor.attr("data-component-anchor-id")] = {
                     elm: anchor
@@ -70,18 +101,50 @@ exports.spin = function (context) {
 
 
         var delegator = initEventDelegator();
-
         var actions = hookActions();
-//console.log("actions", actions);
+        var declaredViews = hookViews();
+
+
+        function showViews (views) {
+            views = views || [];
+            var viewsByName = {};
+            views.forEach(function (view) {
+                viewsByName[view] = true;
+            });
+            Object.keys(declaredViews).forEach(function (name) {
+                if (viewsByName[name]) {
+                    declaredViews[name].show();
+                } else {
+                    declaredViews[name].hide();
+                }
+            });
+        }
+
 
         var anchors = scanAnchors();
-//console.log("anchors", anchors);
 
         delegator.on("action", function (action) {
-            if (action.href) {
+            if (action.href && action.href !== "#") {
                 context.setPath(action.href);
+            } else
+            if (
+                action.target &&
+                /^action:/.test(action.target) &&
+                context.actions
+            ) {
+                var name = action.target.replace(/^action:/, "");
+                if (context.actions[name]) {
+
+                    context.actions[name](context).catch(function (err) {
+                        console.error("Error calling action '" + name + "'", err.stack);
+                    });
+                }
             }
         });
+
+		context.on("changed:views", function (views) {
+		    showViews(views);
+		});
 
 		context.on("changed:path", function (path) {
             window.Promise.all(Object.keys(anchors).map(function (name) {

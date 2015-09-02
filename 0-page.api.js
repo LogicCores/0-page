@@ -7,26 +7,43 @@ exports.adapters = {
 }
 
 
-var Context = exports.Context = function () {
+var Context = exports.Context = function (defaults) {
     var self = this;
 
-    var state = {
-        path: null
-    };
+    var state = window._.extend({
+        path: null,
+        views: []
+    }, defaults || {});
     
-    self.setPath = function (path) {
-    	try {
-            if (state.path !== path) {
-                state.path = path;
-                self.emit("changed:path", path);
-            }
-    	} catch (err) {
-    		console.error("page changed error:", err.stack);
-    	}
+    self.setPath = function (path, forceNotify) {
+        if (state.path !== path || forceNotify) {
+            state.path = path;
+            self.emit("changed:path", path);
+        }
+    }
+
+    self.setViews = function (views) {
+        if (!window._.isEqual(state.views, views)) {
+            state.views = views;
+            self.emit("changed:views", views);
+        }
     }
 
     self.getPath = function () {
         return state.path;
+    }
+
+    self.redirectTo = function (url) {
+        // TODO: Keep track of where we are so we can re-init our
+        //       state when we come back.
+
+        if (/^\//.test(url)) {
+            var windowOrigin = window.location.origin || (window.location.protocol + "//" + window.location.host);
+            url = windowOrigin + url;
+        }
+
+        // TODO: Don't do this here. Let `window` adapter handle it.
+        window.location.href = url;
     }
 }
 Context.prototype = Object.create(window.EventEmitter.prototype);
