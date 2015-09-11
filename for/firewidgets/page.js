@@ -67,7 +67,11 @@ exports.spin = function (context) {
     			if (typeof elm.attr("data-component-section") !== "undefined") return;
     			var name = elm.attr("data-component-view");
     			var visibility = elm.attr("data-component-view-visibility") || null;
-    			views[name] = {
+
+                if (!views[name]) {
+                    views[name] = [];
+                }
+    			views[name].push({
     			    elm: elm,
     			    hide: function () {
             			if (visibility === "hidden") {
@@ -83,7 +87,7 @@ exports.spin = function (context) {
             				elm.removeClass("hidden");
             			}
     			    }
-    			};
+    			});
     		});
     		return views;
         }
@@ -111,12 +115,15 @@ exports.spin = function (context) {
             views.forEach(function (view) {
                 viewsByName[view] = true;
             });
+
             Object.keys(declaredViews).forEach(function (name) {
-                if (viewsByName[name]) {
-                    declaredViews[name].show();
-                } else {
-                    declaredViews[name].hide();
-                }
+                declaredViews[name].forEach(function (declaredView) {
+                    if (viewsByName[name]) {
+                        declaredView.show();
+                    } else {
+                        declaredView.hide();
+                    }
+                });
             });
         }
 

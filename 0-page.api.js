@@ -11,10 +11,24 @@ var Context = exports.Context = function (defaults) {
     var self = this;
 
     var state = window._.extend({
+        baseUrl: null,
         path: null,
         views: []
     }, defaults || {});
-    
+
+
+    self.setBaseUrl = function (baseUrl) {
+        state.baseUrl = baseUrl;
+    }
+
+    self.getBaseUrl = function () {
+        return state.baseUrl;
+    }
+
+    self.getBasePath = function () {
+        return state.baseUrl.replace(/^https?:\/\/[^\/]+/, "");
+    }
+
     self.setPath = function (path, forceNotify) {
         if (state.path !== path || forceNotify) {
             state.path = path;
