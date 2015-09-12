@@ -115,7 +115,6 @@ exports.spin = function (context) {
             views.forEach(function (view) {
                 viewsByName[view] = true;
             });
-
             Object.keys(declaredViews).forEach(function (name) {
                 declaredViews[name].forEach(function (declaredView) {
                     if (viewsByName[name]) {
