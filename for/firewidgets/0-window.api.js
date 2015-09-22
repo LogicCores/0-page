@@ -167,8 +167,14 @@ exports.forLib = function (LIB) {
                     return context.anchors[name](context).then(function (data) {
 
                         var anchor = anchors[name];
-                        // TODO: Allow for various renderers.
-                        anchor.elm.html(data.html);
+
+                        if (typeof data.html === "string") {
+                            anchor.elm.html(data.html);
+                        } else {
+                            // TODO: Patch instead of clearing previous content.
+                            anchor.elm.html("");
+                            $(data.html).appendTo(anchor.elm);
+                        }
 
                         context.emit("rendered", {
                             path: path,
