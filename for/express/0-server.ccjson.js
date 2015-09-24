@@ -10,177 +10,153 @@ exports.forLib = function (LIB) {
             var Entity = function (instanceConfig) {
                 var self = this;
 
-                self.AspectInstance = function (aspectConfig) {
+                var config = {};
+                LIB._.merge(config, defaultConfig);
+                LIB._.merge(config, instanceConfig);
+                config = ccjson.attachDetachedFunctions(config);
 
-                    var config = {};
-                    LIB._.merge(config, defaultConfig);
-                    LIB._.merge(config, instanceConfig);
-                    LIB._.merge(config, aspectConfig);
-                    config = ccjson.attachDetachedFunctions(config);
+                var context = config.context();
 
-                    var context = {
-                        contextForUri: function (uri) {
+                var api = {
+                    contextForUri: function (uri) {
 
-                            var originalUri = uri;
+                        var originalUri = uri;
 
-                            return LIB.Promise.promisify(function (callback) {
-                                // We strip all allowed extensions if present.
-                                // The extensions serve the page in alternative formats.
-                                uri = uri.replace(/(\.md)?\.html?$/, "");
-                                var lookupPath = uri;
-                                if (/\/$/.test(uri)) {
-                                    uri += "index";
-                                }
+                        return LIB.Promise.promisify(function (callback) {
+                            // We strip all allowed extensions if present.
+                            // The extensions serve the page in alternative formats.
+                            uri = uri.replace(/(\.md)?\.html?$/, "");
+                            var lookupPath = uri;
+                            if (/\/$/.test(uri)) {
+                                uri += "index";
+                            }
 
-                                var baseUri = LIB.path.dirname(uri);
-                                var filename = LIB.path.basename(uri);
-                        
-                                // TODO: Refactor to 'cores/overlay'
-                                function locateSkinFile (baseUri, filename, callback) {
-                                    var path = LIB.path.join(config.skin.basePath, baseUri, filename);
+                            var baseUri = LIB.path.dirname(uri);
+                            var filename = LIB.path.basename(uri);
+                    
+                            // TODO: Refactor to 'cores/overlay'
+                            function locateSkinFile (baseUri, filename, callback) {
+                                var path = LIB.path.join(config.skin.basePath, baseUri, filename);
+                                return LIB.fs.exists(path, function (exists) {
+                                    if (exists) {
+                                        return callback(null, LIB.path.join(baseUri, filename));
+                                    }
+                                    // If the exact path is not found we check for an index file.
+                                    path = LIB.path.join(config.skin.basePath, baseUri, "index.html");
                                     return LIB.fs.exists(path, function (exists) {
                                         if (exists) {
-                                            return callback(null, LIB.path.join(baseUri, filename));
+                                            return callback(null, LIB.path.join(baseUri, "index.html"));
                                         }
-                                        // If the exact path is not found we check for an index file.
-                                        path = LIB.path.join(config.skin.basePath, baseUri, "index.html");
-                                        return LIB.fs.exists(path, function (exists) {
-                                            if (exists) {
-                                                return callback(null, LIB.path.join(baseUri, "index.html"));
-                                            }
-                                            // The original path nor index file was found so we fall back
-                                            // to the file of the parent secion and let the
-                                            // client load the correct page content based on
-                                            // window.location.pathname
-                                            var parentBaseUri = LIB.path.dirname(baseUri);
-                                            if (parentBaseUri === baseUri) {
-                                                var err = new Error("No file found for uri: " + uri);
-                                                err.code = 404;
-                                                return callback(err);
-                                            }
-                                            return locateSkinFile(parentBaseUri, filename, callback);
-                                        });
+                                        // The original path nor index file was found so we fall back
+                                        // to the file of the parent secion and let the
+                                        // client load the correct page content based on
+                                        // window.location.pathname
+                                        var parentBaseUri = LIB.path.dirname(baseUri);
+                                        if (parentBaseUri === baseUri) {
+                                            var err = new Error("No file found for uri: " + uri);
+                                            err.code = 404;
+                                            return callback(err);
+                                        }
+                                        return locateSkinFile(parentBaseUri, filename, callback);
                                     });
-                                }
+                                });
+                            }
 
-                                // TODO: Refactor to 'cores/overlay'
-                                function locatePageFile (baseUri, filename, callback) {
-                                    var path = LIB.path.join(config.pages.basePath, baseUri, filename);
+                            // TODO: Refactor to 'cores/overlay'
+                            function locatePageFile (baseUri, filename, callback) {
+                                var path = LIB.path.join(config.pages.basePath, baseUri, filename);
+                                return LIB.fs.exists(path, function (exists) {
+                                    if (exists) {
+                                        return callback(null, LIB.path.join(baseUri, filename));
+                                    }
+                                    // If the exact path is not found we check for an index file.
+                                    path = LIB.path.join(config.pages.basePath, baseUri, "Index.md");
                                     return LIB.fs.exists(path, function (exists) {
                                         if (exists) {
-                                            return callback(null, LIB.path.join(baseUri, filename));
+                                            return callback(null, LIB.path.join(baseUri, "Index.md"));
                                         }
-                                        // If the exact path is not found we check for an index file.
-                                        path = LIB.path.join(config.pages.basePath, baseUri, "Index.md");
-                                        return LIB.fs.exists(path, function (exists) {
-                                            if (exists) {
-                                                return callback(null, LIB.path.join(baseUri, "Index.md"));
-                                            }
-                                            // The original path nor index file was found so we fall back
-                                            // to the file of the parent secion and let the
-                                            // client load the correct page content based on
-                                            // window.location.pathname
-                                            var parentBaseUri = LIB.path.dirname(baseUri);
-                                            if (parentBaseUri === baseUri) {
-                                                var err = new Error("No file found for uri: " + uri);
-                                                err.code = 404;
-                                                return callback(err);
-                                            }
-                                            return locatePageFile(parentBaseUri, filename, callback);
-                                        });
+                                        // The original path nor index file was found so we fall back
+                                        // to the file of the parent secion and let the
+                                        // client load the correct page content based on
+                                        // window.location.pathname
+                                        var parentBaseUri = LIB.path.dirname(baseUri);
+                                        if (parentBaseUri === baseUri) {
+                                            var err = new Error("No file found for uri: " + uri);
+                                            err.code = 404;
+                                            return callback(err);
+                                        }
+                                        return locatePageFile(parentBaseUri, filename, callback);
                                     });
-                                }
+                                });
+                            }
 
-                                return locateSkinFile(
-                                    baseUri,
-                                    filename + ".htm" + (/\/index$/.test(originalUri) ? "l":""),
-                                    function (err, skinUri) {
-                                        if (err) {
-                                            // If skin is not found we assume its not a valid page url
-                                            return callback(null, null);
-                                        }
+                            return locateSkinFile(
+                                baseUri,
+                                filename + ".htm" + (/\/index$/.test(originalUri) ? "l":""),
+                                function (err, skinUri) {
+                                    if (err) {
+                                        // If skin is not found we assume its not a valid page url
+                                        return callback(null, null);
+                                    }
 
-                                        return locatePageFile(
-                                            baseUri,
-                                            filename + ".md",
-                                            function (err, pageUri) {
-                                                if (
-                                                    err &&
-                                                    err.code === 404 &&
-                                                    config.pages.defaultPath
-                                                ) {
-                                                    err = null;
-                                                    pageUri = config.pages.defaultPath;
-                                                }
+                                    return locatePageFile(
+                                        baseUri,
+                                        filename + ".md",
+                                        function (err, pageUri) {
+                                            if (
+                                                err &&
+                                                err.code === 404 &&
+                                                config.pages.defaultPath
+                                            ) {
+                                                err = null;
+                                                pageUri = config.pages.defaultPath;
+                                            }
 
-                                                if (err) {
-                                                    // If page is not found we assume its not a valid page url
-                                                    return callback(null, null);
-                                                }
+                                            if (err) {
+                                                // If page is not found we assume its not a valid page url
+                                                return callback(null, null);
+                                            }
+    
+                                            var baseUrlParts = URL.parse(config.pages.baseUrl);
         
-                                                var baseUrlParts = URL.parse(config.pages.baseUrl);
-            
-                                                // TODO: Refactor to '../../0-server.api.js' just like context in '../../0-window.api.js'
-                                                return callback(null, {
-                                                    "skin": {
-                                                        "host": {
-                                                            "baseUrl": config.pages.baseUrl,
-                                                            "path": skinUri
-                                                        },
-                                                        "data": {
-                                                            "componentsPath": LIB.path.join(config.skin.basePath, "components.json"),
-                                                            "path": LIB.path.join(config.skin.basePath, skinUri)
-                                                        }
+                                            // TODO: Refactor to '../../0-server.api.js' just like context in '../../0-window.api.js'
+                                            return callback(null, {
+                                                "skin": {
+                                                    "host": {
+                                                        "baseUrl": config.pages.baseUrl,
+                                                        "path": skinUri
                                                     },
-                                                    "page": {
-                                                        "lookup": {
-                                                            "path": lookupPath
-                                                        },
-                                                        "host": {
-                                                            "baseUrl": config.pages.baseUrl,
-                                                            "path": originalUri,
-                                                            "url": config.pages.baseUrl + originalUri
-                                                        },
-                                                        "data": {
-                                                            "basePath": config.pages.basePath,
-                                                            "path": pageUri,
-                                                            "realpath": LIB.path.join(config.pages.basePath, pageUri)
-                                                        }
+                                                    "data": {
+                                                        "componentsPath": LIB.path.join(config.skin.basePath, "components.json"),
+                                                        "path": LIB.path.join(config.skin.basePath, skinUri)
+                                                    }
+                                                },
+                                                "page": {
+                                                    "lookup": {
+                                                        "path": lookupPath
                                                     },
-                                                    "clientContext": config.client.context
-                                                });
-                                            }
-                                        );
-                                    }
-                                );
-                            })();
-                        }
-                    };
-
-                    return LIB.Promise.resolve({
-                        app: function () {
-
-                            return LIB.Promise.resolve(
-                                ccjson.makeDetachedFunction(
-                                    function (req, res, next) {
-
-                                        if (
-                                            config.request &&
-                                            config.request.contextAlias
-                                        ) {
-                                            if (!req.context) {
-                                                req.context = {};
-                                            }
-                                            req.context[config.request.contextAlias] = context;
+                                                    "host": {
+                                                        "baseUrl": config.pages.baseUrl,
+                                                        "path": originalUri,
+                                                        "url": config.pages.baseUrl + originalUri
+                                                    },
+                                                    "data": {
+                                                        "basePath": config.pages.basePath,
+                                                        "path": pageUri,
+                                                        "realpath": LIB.path.join(config.pages.basePath, pageUri)
+                                                    }
+                                                },
+                                                "clientContext": config.client.context
+                                            });
                                         }
-
-                                        return next();
-                                    }
-                                )
+                                    );
+                                }
                             );
-                        }
-                    });
-                }
+                        })();
+                    }
+                };
+                
+                context.setAdapterAPI(api);
             }
             Entity.prototype.config = defaultConfig;
 
