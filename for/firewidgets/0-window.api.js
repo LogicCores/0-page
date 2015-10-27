@@ -138,7 +138,12 @@ exports.forLib = function (LIB) {
     
             delegator.on("action", function (action) {
                 if (action.href && action.href !== "#") {
-                    context.setPath(action.href);
+                    var href = action.href;
+                    var basePath = context.getBasePath();
+                    if (action.href.substring(0, basePath.length) === basePath) {
+                        href = href.substring(basePath.length);
+                    }
+                    context.setPath(href);
                 } else
                 if (
                     action.target &&
