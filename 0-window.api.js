@@ -23,8 +23,10 @@ exports.forLib = function (LIB) {
                 views: []
             };
             LIB._.merge(state, LIB._.cloneDeep(defaults));
-        
-    
+
+            self.config = defaults;
+
+
             self.getBaseUrl = function () {
                 return state.baseUrl;
             }
@@ -59,8 +61,20 @@ exports.forLib = function (LIB) {
                 }
             }
     
-            self.getPath = function () {
-                return state.path;
+            self.getPath = function (options) {
+                options = options || {};
+                var parts = state.path.split("#");
+                var path = "";
+                if (options.path !== false) {
+                    path = parts[0];
+                }
+                if (
+                    options.hash === true &&
+                    parts[1]
+                ) {
+                    path += "#" + parts[1];
+                }
+                return path;
             }
         
             self.redirectTo = function (uri) {

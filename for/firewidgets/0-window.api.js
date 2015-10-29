@@ -22,12 +22,12 @@ exports.forLib = function (LIB) {
     
                 var delegator = DOM_DELEGATOR();
                 delegator.addGlobalEventListener("click", function (event) {
-    
+
                     var elm = $(event.target);
                     var actionTarget = elm.attr("data-component-action-target");
-    
+
                     if (!actionTarget) return;
-    
+
                     var action = {
                         elm: elm,
                         href: elm.attr("data-component-action-href"),
@@ -159,12 +159,50 @@ exports.forLib = function (LIB) {
                     }
                 }
             });
+            
+            
+            function augmentInternalLinks (domNode, anchorName) {
+
+                // Update internal links in loaded page to point to our anchor if not specifically set.
+                $("a[href]", domNode).each(function () {
+                    var elm = $(this);
+                    var href = elm.attr("href");
+                    if (!/^\//.test(href)) return;
+                    if (elm.attr("data-component-action-target")) return;
+                    elm.attr("data-component-action-target", "anchor:" + anchorName);
+                    elm.attr("data-component-action-href", href);
+                    elm.click(function (argument) {
+                        // Prevent page from navigating away.
+                        // Events get acted on in the delegator.
+                        return false;
+                    });
+                });
+            }
+
+			context.contexts.component.on("rendered:component", function (component) {
+			    var anchor = component.getPageContext().anchor;
+			    if (!anchor) return;
+			    augmentInternalLinks(component.getDomNode(), anchor);
+			});
+
 
     		context.on("changed:views", function (views) {
     		    showViews(views);
     		});
 
+            var lastPath = null;
     		context.on("changed:path", function (path) {
+
+                // If only the hash has changed we do not re-render the page.
+                if (
+                    lastPath &&
+                    lastPath.replace(/#.*$/, "") === path.replace(/#.*$/, "")
+                ) {
+                    // Ignore page change event as only hash has changed.
+                    return;
+                }
+                lastPath = path;
+
                 LIB.Promise.all(Object.keys(anchors).map(function (name) {
                     if (!context.anchors[name]) {
                         return window.Promise.resolve();
@@ -180,6 +218,10 @@ exports.forLib = function (LIB) {
                             anchor.elm.html("");
                             $(data.html).appendTo(anchor.elm);
                         }
+
+
+                        augmentInternalLinks(anchor.elm, name);
+
 
                         context.emit("rendered", {
                             path: path,

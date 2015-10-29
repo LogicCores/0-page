@@ -15,34 +15,50 @@ exports.forLib = function (LIB) {
             var initNotified = false;
     
             // TODO: Make history survive page loads
-    
-            var currentPath = null;
+
+            if (
+                basePath &&
+                basePath !== "/"
+            ) {
+                PAGE.base(basePath);
+            }
+
+            var defaultNavigated = false;
             PAGE('*', function load(ctx) {
+
                 var forceNotify = !initNotified;
                 initNotified = true;
-    
                 var path = ctx.path.replace(/\?.*$/, "");
-                // TODO: Use 'PAGE.base()'
-                path = path.replace(new RegExp(basePath.replace(/\//g, "\\/")), "");
-                currentPath = path;
-    
+
+                function setPath (path, forceNotify) {
+                    defaultNavigated = true;
+                    if (
+                        path === context.getPath({hash:true}) &&
+                        forceNotify !== true
+                    ) return;
+
+                    context.setPath(path, forceNotify);
+                }
+
                 // TODO: Track query.
                 if (
                     path === "/" &&
-                    context.getPath() &&
-                    context.getPath() !== "/"
+                    context.getPath({hash:true}) &&
+                    context.getPath({hash:true}) !== "/" &&
+                    !defaultNavigated
                 ) {
                     // When loading root page, navigate to default page if set
-                    context.setPath(context.getPath(), forceNotify);
+                    setPath(context.getPath({hash:true}), forceNotify);
                 } else {
-                    context.setPath(path, forceNotify);
+                    setPath(path + (ctx.hash?"#"+ctx.hash:""), forceNotify);
                 }
             });
-    
+
     		context.on("changed:path", function (path) {
-                PAGE.show(basePath + path);
+                if (PAGE.current === path) return;
+                PAGE.show(path);
     		});
-    
+
             // Wait for listeners to attach
             setTimeout(function () {
                 PAGE({
