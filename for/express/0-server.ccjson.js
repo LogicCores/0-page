@@ -116,9 +116,19 @@ exports.forLib = function (LIB) {
                                                 // If page is not found we assume its not a valid page url
                                                 return callback(null, null);
                                             }
-    
+
                                             var baseUrlParts = URL.parse(config.pages.baseUrl);
-        
+                                            
+                                            function getClientContext () {
+                                                var clientContext = config.client.context;
+                                                Object.keys(clientContext).forEach(function (name) {
+                                                    if (typeof clientContext[name] === "function") {
+                                                        clientContext[name] = clientContext[name]();
+                                                    }
+                                                });
+                                                return clientContext;
+                                            }
+
                                             // TODO: Refactor to '../../0-server.api.js' just like context in '../../0-window.api.js'
                                             return callback(null, {
                                                 "skin": {
@@ -146,7 +156,7 @@ exports.forLib = function (LIB) {
                                                         "realpath": LIB.path.join(config.pages.basePath, pageUri)
                                                     }
                                                 },
-                                                "clientContext": config.client.context
+                                                "clientContext": getClientContext()
                                             });
                                         }
                                     );
