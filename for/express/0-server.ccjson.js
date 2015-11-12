@@ -165,10 +165,14 @@ exports.forLib = function (LIB) {
                         })();
                     }
                 };
-                
+
                 context.setAdapterAPI(api);
+                context.setAspectConfig({
+                    baseUrl: config.pages.baseUrl
+                });
             }
             Entity.prototype.config = defaultConfig;
+
 
             return Entity;
         }
