@@ -1,8 +1,6 @@
 
 exports.forLib = function (LIB) {
     var ccjson = this;
-    
-    const URL = require("url");
 
     return LIB.Promise.resolve({
         forConfig: function (defaultConfig) {
@@ -119,7 +117,7 @@ exports.forLib = function (LIB) {
 
                                             pageUri = pageUri || "/";
 
-                                            var baseUrlParts = URL.parse(config.pages.baseUrl);
+                                            var baseUrlParts = LIB.url.parse(config.pages.baseUrl);
 
                                             function getClientContext () {
                                                 var clientContext = config.client.context;
