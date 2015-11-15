@@ -117,8 +117,10 @@ exports.forLib = function (LIB) {
                                                 return callback(null, null);
                                             }
 
+                                            pageUri = pageUri || "/";
+
                                             var baseUrlParts = URL.parse(config.pages.baseUrl);
-                                            
+
                                             function getClientContext () {
                                                 var clientContext = config.client.context;
                                                 Object.keys(clientContext).forEach(function (name) {
