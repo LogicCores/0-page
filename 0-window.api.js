@@ -19,8 +19,10 @@ exports.forLib = function (LIB) {
         
             var state = {
                 baseUrl: null,
-                path: null,
-                views: []
+                nextPath: null,     // The next path we should be transitioning to as soon as possible
+                path: null,         // The current path
+                views: [],
+                isAnimatingDeferred: null
             };
             LIB._.merge(state, LIB._.cloneDeep(defaults));
 
@@ -34,14 +36,41 @@ exports.forLib = function (LIB) {
             self.getBasePath = function () {
                 return state.baseUrl.replace(/^https?:\/\/[^\/]+/, "");
             }
-        
+
             self.setPath = function (path, forceNotify) {
                 if (state.path !== path || forceNotify) {
-                    state.path = path;
-                    self.emit("changed:path", path);
+                    if (state.isAnimatingDeferred) {
+                        // We wait until the previous page has finished animating.
+                        state.nextPath = path;
+                    } else {
+                        // The previous page has already finished animating
+                        // or this is the first time so we can switch right away.
+                        state.nextPath = null;
+                        state.path = path;
+                        state.isAnimatingDeferred = LIB.Promise.defer();
+                        state.isAnimatingDeferred.promise.timeout(15 * 1000).catch(LIB.Promise.TimeoutError, function (err) {
+                            console.error("Page took too long to render!");
+                        }).then(function () {
+console.log("PAGE IS ALL ANIMATED!!!!!");
+
+                            state.isAnimatingDeferred = null;
+                            if (state.nextPath) {
+console.log("SET NEXT PATH:::", state.nextPath);
+                                self.setPath(state.nextPath);
+                            }
+                        });
+                        self.emit("changed:path", path);
+                    }
                 }
             }
-    
+
+            self.notifyPageAnimated = function () {
+                if (!state.isAnimatingDeferred) {
+                    throw new Error("There is no rendered page pending animation!");
+                }
+                state.isAnimatingDeferred.resolve();
+            }
+
             self.resolveUri = function (uri) {
                 if (/https?:\/\//.test(uri)) {
                     return uri;
