@@ -228,6 +228,8 @@ exports.forLib = function (LIB) {
                             anchor: name,
                             domNode: anchor.elm
                         });
+                        
+                        return null;
                     });
                 })).catch(function (err) {
                     console.error("Error rendering page", err.stack);

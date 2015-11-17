@@ -47,7 +47,13 @@ exports.forLib = function (LIB) {
                         // or this is the first time so we can switch right away.
                         state.nextPath = null;
                         state.path = path;
-                        state.isAnimatingDeferred = LIB.Promise.defer();
+                        
+                        state.isAnimatingDeferred = {};
+                        state.isAnimatingDeferred.promise = new LIB.Promise(function (resolve, reject) {
+                            state.isAnimatingDeferred.resolve = resolve;
+                            state.isAnimatingDeferred.reject = reject;
+                        });
+                        
                         state.isAnimatingDeferred.promise.timeout(15 * 1000).catch(LIB.Promise.TimeoutError, function (err) {
                             console.error("Page took too long to render!");
                         }).then(function () {
