@@ -37,7 +37,9 @@ exports.forLib = function (LIB) {
                         forceNotify !== true
                     ) return;
 
-                    context.setPath(path, forceNotify);
+                    context.setPath(path, {
+                        forceNotify: forceNotify
+                    });
                 }
 
                 // TODO: Track query.

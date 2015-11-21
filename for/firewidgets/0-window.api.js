@@ -3,7 +3,6 @@ exports.forLib = function (LIB) {
 
     const PAGE = require("../../../../lib/firewidgets-for-zerosystem/window.page");
 
-    
     var exports = {};
 
     exports.spin = function (context) {
@@ -211,6 +210,25 @@ exports.forLib = function (LIB) {
 
                         var anchor = anchors[name];
 
+                        var subComponents = [];
+
+                        if (data.chscript) {
+
+                            // NOTE: This will render a vtree to the page and leave it up to
+                            //       the container to to look for sub components to render.
+
+                            var template = new context.contexts.adapters.template["virtual-dom"].Template(
+                                path,
+                                data.chscript
+                            );
+                            template.renderTo(anchor.elm, {
+                                "$anchors": function (name) {
+                                    subComponents.push(name);
+                                    return null;
+                                }
+                            });
+
+                        } else
                         if (typeof data.html === "string") {
                             anchor.elm.html(data.html);
                         } else {
@@ -219,24 +237,132 @@ exports.forLib = function (LIB) {
                             $(data.html).appendTo(anchor.elm);
                         }
 
-
                         augmentInternalLinks(anchor.elm, name);
-
 
                         context.emit("rendered", {
                             path: path,
                             anchor: name,
-                            domNode: anchor.elm
+                            domNode: anchor.elm,
+                            subComponents: subComponents
                         });
-                        
+
                         return null;
                     });
                 })).catch(function (err) {
                     console.error("Error rendering page", err.stack);
                 });
     		});
-        }
+    		
+    		
+
+        	var cachedPageContent = {};
+
+    		self.loadPageContentForContext = function (pageContext) {
+    		    var contexts = context.contexts;
+
+    		    // There are two ways to load pages.
+    		    // 1) The optimized way using the PINF loader which loads a script file.
+    		    // 2) The fallback approach which loads a HTML file and extracts the page component from it.
+    		    
+    		    function loadPINFBundle () {
+    		        
+    		        
+    		    }
+
+    		    function loadPlainHTML () {
+
+    				var uri = context.getBaseUrl() + pageContext.getPath() + ".md.htm";
+
+    				if (
+    					context.config.alwaysReload === false &&
+    					cachedPageContent[uri]
+    				) {
+                        // TODO: Optionally initiate fetch or HEAD and update page if changed.
+    					return LIB.Promise.resolve(cachedPageContent[uri]);
+    				}
+
+    				function fetchPageContent () {
+
+    					return contexts.adapters.fetch.window.fetch(uri).then(function(response) {
+    						if (response.status !== 200) {
+    							var err = new Error("Error fetching page content");
+    							err.code = response.status;
+    							throw err;
+    						}
+    						return response.text();
+    					}).then(function (html) {
+    						return html;
+    					});
+    				}
     
+    				// TODO: Cache page objects including new context from initContainerContext() below and just
+    				//       detach/re-attach when navigating in cached mode.
+    				return fetchPageContent().then(function (html) {
+    
+    					// TODO: Remove this once scripts are cached more intelligently in nested contexts.
+    					contexts.component.resetComponentScripts();
+    
+     					return contexts.adapters.component.firewidgets.liftComponentsForPageFragment(
+    						context,
+    						html
+    					).then(function (htmlish) {
+
+    					    if (typeof htmlish.getLayout === "function") {
+    					        // We got a chscript which we can pass along directly.
+    							return {
+    								chscript: htmlish.getLayout()
+    							};
+    					    }
+
+    					    // We got something that will generate HTML.
+    					    // TODO: Convert to chscript or render directly.
+
+    						function getHTML (htmlish) {
+    							if (typeof htmlish === "string") {
+    								return htmlish || "";
+    							} else
+    							if (typeof htmlish === "function") {
+    								return htmlish() || "";
+    							} else {
+    								console.error("htmlish", htmlish);
+    								throw new Error("Unknown factory for htmlish!");
+    							}
+    						}
+    						
+    						// Disable all page scripts thare are still left.
+    						// TODO: Enable running of page scripts for script tags that have a contract for a runtime declared.
+    						// @source http://stackoverflow.com/a/9899441/330439
+    						function removeScripts (text) {
+    							var SCRIPT_REGEX = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+    							while (SCRIPT_REGEX.test(text)) {
+    							    text = text.replace(SCRIPT_REGEX, "");
+    							}
+    							return text;
+    						}
+    
+    						var html = getHTML(htmlish);
+    						html = removeScripts(html);
+    
+    						return {
+    							html: html
+    						};
+    					});
+    				}).then(function (response) {
+    
+    					cachedPageContent[uri] = response;
+    					return response;
+    				}).catch(function (err) {
+    					console.error("Error fetching page content", err);
+    					return {
+    						html: "Got error status: " + err.code
+    					};
+    				});
+    		    }
+
+    		    return loadPlainHTML();
+			}
+        }
+
         return new Page(context);
     }
     

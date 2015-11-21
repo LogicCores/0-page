@@ -37,8 +37,21 @@ exports.forLib = function (LIB) {
                 return state.baseUrl.replace(/^https?:\/\/[^\/]+/, "");
             }
 
-            self.setPath = function (path, forceNotify) {
-                if (state.path !== path || forceNotify) {
+            self.setPath = function (path, options) {
+
+                if (typeof options === "boolean") {
+                    console.log("DEPRECATED: Use 'forceNotify' key in options object!", new Error().stack);
+                    options = {
+                        forceNotify: options
+                    }
+                }
+                options = options || {};
+
+                if (typeof options.scrollToTop === "undefined") {
+                    options.scrollToTop = true;
+                }
+
+                if (state.path !== path || options.forceNotify) {
                     if (state.isAnimatingDeferred) {
                         // We wait until the previous page has finished animating.
                         state.nextPath = path;
@@ -53,17 +66,26 @@ exports.forLib = function (LIB) {
                             state.isAnimatingDeferred.resolve = resolve;
                             state.isAnimatingDeferred.reject = reject;
                         });
-                        
+
                         state.isAnimatingDeferred.promise.timeout(15 * 1000).catch(LIB.Promise.TimeoutError, function (err) {
-                            console.error("Page took too long to render!");
+                            console.error("Page took too long to render!", err.stack);
+                            return null;
                         }).then(function () {
-console.log("PAGE IS ALL ANIMATED!!!!!");
+
+                            if (LIB.VERBOSE) console.log("Page '" + state.path + "' is animated!");
+
+                            if (options.scrollToTop) {
+            					window.scrollTo(0, 0);
+                            }
 
                             state.isAnimatingDeferred = null;
                             if (state.nextPath) {
-console.log("SET NEXT PATH:::", state.nextPath);
+                                
+                                if (LIB.VERBOSE) console.log("Set next page path to '" + state.nextPath + "'!");
                                 self.setPath(state.nextPath);
                             }
+                            
+                            return null;
                         });
                         self.emit("changed:path", path);
                     }
