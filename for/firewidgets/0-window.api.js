@@ -1,6 +1,9 @@
 
 exports.forLib = function (LIB) {
 
+    // This should be injected into the lib already.    
+    const PINF = window.PINF;
+
     const PAGE = require("../../../../lib/firewidgets-for-zerosystem/window.page");
 
     var exports = {};
@@ -265,7 +268,81 @@ exports.forLib = function (LIB) {
     		    // 2) The fallback approach which loads a HTML file and extracts the page component from it.
     		    
     		    function loadPINFBundle () {
-    		        
+
+    				var uri = context.getBaseUrl() + pageContext.getPath() + ".md.chscript.bundle.js";
+
+    				if (
+    					context.config.alwaysReload === false &&
+    					cachedPageContent[uri]
+    				) {
+                        // TODO: Optionally initiate fetch or HEAD and update page if changed.
+    					return LIB.Promise.resolve(cachedPageContent[uri]);
+    				}
+
+    				function fetchPageContent () {
+
+                        return new LIB.Promise(function (resolve, reject) {
+                            try {
+                                // Use the PINF Loader to load the widget
+                                // @see https://github.com/pinf/pinf-loader-js
+                            	PINF.sandbox(uri, resolve, reject);
+                            } catch (err) {
+                                return reject(err);
+                            }
+                        }).catch(function (err) {
+                            console.error("Error loading page implementation from '" + uri + "':", err.stack);
+                            throw err;
+                        });
+    				}
+
+    				// TODO: Cache page objects including new context from initContainerContext() below and just
+    				//       detach/re-attach when navigating in cached mode.
+    				return fetchPageContent().then(function (sandbox) {
+
+    					// TODO: Remove this once scripts are cached more intelligently in nested contexts.
+    					contexts.component.resetComponentScripts();
+    					
+    					var widgetBundle = sandbox.boot();
+
+                        if (typeof widgetBundle.getScripts === "function") {
+                            
+                            var scripts = widgetBundle.getScripts();
+                            Object.keys(scripts).forEach(function (componentId) {
+                                if (!scripts[componentId].window) return;
+    
+            			        contexts.component.firewidgets.registerImplementationForPage(
+            			            context.getPath(),
+            			            componentId,
+            			            scripts[componentId].window
+            			        );
+                            });
+                        }
+                        if (typeof widgetBundle.getComponents === "function") {
+                            var components = widgetBundle.getComponents();
+                            Object.keys(components).forEach(function (id) {
+
+                                contexts.component.registerComponentOverrideTemplateForActivePage(
+                                    id,
+                                    components[id]
+                                );
+                            });
+                        }
+
+				        // We got a chscript which we can pass along directly.
+						return {
+							chscript: widgetBundle.getLayout()
+						};
+
+    				}).then(function (response) {
+    
+    					cachedPageContent[uri] = response;
+    					return response;
+    				}).catch(function (err) {
+    					console.error("Error fetching page content", err);
+    					return {
+    						html: "Got error status: " + err.code
+    					};
+    				});    		        
     		        
     		    }
 
@@ -359,7 +436,8 @@ exports.forLib = function (LIB) {
     				});
     		    }
 
-    		    return loadPlainHTML();
+                return loadPINFBundle();
+//    		    return loadPlainHTML();
 			}
         }
 

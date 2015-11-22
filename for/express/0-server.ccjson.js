@@ -19,6 +19,8 @@ exports.forLib = function (LIB) {
                     contextForUri: function (uri) {
 
                         var originalUri = uri;
+                        
+                        if (LIB.VERBOSE) console.log("contextForUri() originalUri:", originalUri);
 
                         return LIB.Promise.promisify(function (callback) {
                             // We strip all allowed extensions if present.
@@ -28,6 +30,9 @@ exports.forLib = function (LIB) {
                             if (/\/$/.test(uri)) {
                                 uri += "index";
                             }
+
+                            if (LIB.VERBOSE) console.log("contextForUri() lookupPath:", lookupPath);
+                            if (LIB.VERBOSE) console.log("contextForUri() uri:", uri);
 
                             var baseUri = LIB.path.dirname(uri);
                             var filename = LIB.path.basename(uri);
