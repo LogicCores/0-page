@@ -269,7 +269,8 @@ exports.forLib = function (LIB) {
     		    
     		    function loadPINFBundle () {
 
-    				var uri = context.getBaseUrl() + pageContext.getPath() + ".md.chscript.bundle.js";
+    				var uri = context.config.loadBaseUrl + pageContext.getPath() + ".md.chscript.bundle.js";
+
 
     				if (
     					context.config.alwaysReload === false &&
