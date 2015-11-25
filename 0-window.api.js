@@ -56,37 +56,42 @@ exports.forLib = function (LIB) {
                         // We wait until the previous page has finished animating.
                         state.nextPath = path;
                     } else {
+
+                        var hashOnlyChange = (state.path.replace(/#.*$/, "") === path.replace(/#.*$/, ""));
+
                         // The previous page has already finished animating
                         // or this is the first time so we can switch right away.
                         state.nextPath = null;
                         state.path = path;
-                        
-                        state.isAnimatingDeferred = {};
-                        state.isAnimatingDeferred.promise = new LIB.Promise(function (resolve, reject) {
-                            state.isAnimatingDeferred.resolve = resolve;
-                            state.isAnimatingDeferred.reject = reject;
-                        });
 
-                        state.isAnimatingDeferred.promise.timeout(15 * 1000).catch(LIB.Promise.TimeoutError, function (err) {
-                            console.error("Page took too long to render!", err.stack);
-                            return null;
-                        }).then(function () {
-
-                            if (LIB.VERBOSE) console.log("Page '" + state.path + "' is animated!");
-
-                            if (options.scrollToTop) {
-            					window.scrollTo(0, 0);
-                            }
-
-                            state.isAnimatingDeferred = null;
-                            if (state.nextPath) {
+                        if (!hashOnlyChange) {
+                            state.isAnimatingDeferred = {};
+                            state.isAnimatingDeferred.promise = new LIB.Promise(function (resolve, reject) {
+                                state.isAnimatingDeferred.resolve = resolve;
+                                state.isAnimatingDeferred.reject = reject;
+                            });
+    
+                            state.isAnimatingDeferred.promise.timeout(15 * 1000).catch(LIB.Promise.TimeoutError, function (err) {
+                                console.error("Page took too long to render!", err.stack);
+                                return null;
+                            }).then(function () {
+    
+                                if (LIB.VERBOSE) console.log("Page '" + state.path + "' is animated!");
+    
+                                if (options.scrollToTop) {
+                					window.scrollTo(0, 0);
+                                }
+    
+                                state.isAnimatingDeferred = null;
+                                if (state.nextPath) {
+                                    
+                                    if (LIB.VERBOSE) console.log("Set next page path to '" + state.nextPath + "'!");
+                                    self.setPath(state.nextPath);
+                                }
                                 
-                                if (LIB.VERBOSE) console.log("Set next page path to '" + state.nextPath + "'!");
-                                self.setPath(state.nextPath);
-                            }
-                            
-                            return null;
-                        });
+                                return null;
+                            });
+                        }
                         self.emit("changed:path", path);
                     }
                 }
