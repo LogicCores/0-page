@@ -57,7 +57,13 @@ exports.forLib = function (LIB) {
                         state.nextPath = path;
                     } else {
 
-                        var hashOnlyChange = (state.path.replace(/#.*$/, "") === path.replace(/#.*$/, ""));
+                        var hashOnlyChange = (
+                            (
+                                state.path.indexOf("#") !== -1 ||
+                                path.indexOf("#") !== -1
+                            ) &&
+                            state.path.replace(/#.*$/, "") === path.replace(/#.*$/, "")
+                        );
 
                         // The previous page has already finished animating
                         // or this is the first time so we can switch right away.
@@ -99,7 +105,8 @@ exports.forLib = function (LIB) {
 
             self.notifyPageAnimated = function () {
                 if (!state.isAnimatingDeferred) {
-                    throw new Error("There is no rendered page pending animation!");
+                    if (LIB.VERBOSE) console.warn("There is no rendered page pending animation!");
+                    return;
                 }
                 state.isAnimatingDeferred.resolve();
             }
